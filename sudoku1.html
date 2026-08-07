@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Sudoku App</title>
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --container-bg: #ffffff;
+            --border-color: #333333;
+            --light-border: #cccccc;
+            --text-color: #2c3e50;
+            --fixed-bg: #f8f9fa;
+            --selected-bg: #b3d4fc;
+            --highlight-bg: #e2f0fd;
+            --error-color: #e74c3c;
+            --primary-btn: #3498db;
+            --primary-btn-hover: #2980b9;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 10px;
+        }
+
+        .container {
+            background: var(--container-bg);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+            font-size: 28px;
+            letter-spacing: 1px;
+        }
+
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        select, button {
+            padding: 8px 16px;
+            font-size: 14px;
+            border-radius: 6px;
+            border: 1px solid var(--light-border);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        select {
+            background-color: white;
+        }
+
+        button.primary {
+            background-color: var(--primary-btn);
+            color: white;
+            border: none;
+        }
+
+        button.primary:hover {
+            background-color: var(--primary-btn-hover);
+        }
+
+        /* 9x9 Grid Layout */
+        .board {
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);
+            grid-template-rows: repeat(9, 1fr);
+            border: 3px solid var(--border-color);
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            margin-bottom: 20px;
+            background-color: var(--border-color);
+            gap: 1px;
+        }
+
+        .cell {
+            background-color: white;
+            align-items: center;
+            justify-content: center;
+            font-size: calc(1.5rem + 0.5vw);
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.15s ease;
+        }
+
+        .empty-cell {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr)
+        }
+        .non-empty-cell {
+            display: flex;
+        }
+
+        .hintcell {
+            background-color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: calc(0.5rem + 0.15vw);
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.15s ease;
+        }
+
+        /* Thick borders for 3x3 blocks */
+        .cell:nth-child(3n) {
+            border-right: 2px solid var(--border-color);
+        }
+        .cell:nth-child(9n) {
+            border-right: none;
+        }
+        .cell-row-2, .cell-row-5 {
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        /* Interactive Cell States */
+        .cell.fixed {
+            background-color: var(--fixed-bg);
+            color: #555;
+            cursor: not-allowed;
+        }
+        .cell.selected {
+            background-color: var(--selected-bg) !important;
+        }
+        .cell.highlighted {
+            background-color: var(--highlight-bg);
+        }
+        .cell.error {
+            color: var(--error-color);
+            animation: shake 0.2s ease-in-out;
+        }
+
+        /* Numpad Input Panel */
+        .numpad {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            width: 100%;
+        }
+
+        .num-btn {
+            background-color: #f8f9fa;
+            border: 1px solid var(--light-border);
+            padding: 12px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 6px;
+        }
+
+        .num-btn:hover {
+            background-color: #e9ecef;
+        }
+
+        .num-btn.clear-btn {
+            grid-column: span 1;
+            background-color: #fadbd8;
+            color: #c0392b;
+        }
+        .num-btn.clear-btn:hover {
+            background-color: #f5b7b1;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-4px); }
+            75% { transform: translateX(4px); }
+        }
+    </style>
+
+<script>
+    // array with values 0..sz-1  randomly arranged.  Ex 6 could return [5,0,2,3,1,4]
+    function createScrambled0BasedNumberArray(sz) {          
+        let cellsRand = Array.from({length: sz}, (_, i) => i)
+        for (let idx1=0; idx1<sz; idx1++) {
+            let idx2 = (idx1 + 1 + Math.floor(Math.random()*(sz-1))) % sz;
+            if (idx1===idx2) alert(`line385 numbers are both ${idx1}`);
+            const num3 = cellsRand[idx1];
+            cellsRand[idx1] = cellsRand[idx2];
+            cellsRand[idx2] = num3;
+        }
+        return cellsRand; 
+    }
+    function countOfMaskBits(mask) {
+        let retval = 0;
+        while (mask) {
+            if (mask&1) retval++;
+            mask >>= 1;
+        }
+        return retval;
+    }
+    function maskToString(mask) {
+            let retval = '';
+            let num = 1;
+            while (mask) {
+                if (mask&1) retval += num;
+                num++;
+                mask >>= 1;
+            }
+            return retval;
+    }
+    function stringToMask(str) {
+        let retval = 0;
+        //console.log({str})
+        for (let letter of str) {
+            //console.log({letter})
+            retval |= 1<<(parseInt(letter)-1)
+        }
+        return retval;
+    }
+    function maskToNumList(mask) {
+            let retval = [];
+            let num = 1;
+            while (mask) {
+                if (mask&1) retval.push(num)
+                num++;
+                mask >>= 1;
+            }
+            return retval;
+    }
+    class CellHints {
+        constructor(name) {
+            this.name = name;
+            this.mask = (1<<9) - 1;
+        }
+        canHave(num) {  // num 1..9
+            const retval1a = (1 << (num-1)) & this.mask;
+            const retval1 = retval1a !== 0
+            return retval1;
+        }
+        canHaveString() {
+            return maskToString(this.mask);
+            let retval = '';
+            let mm = this.mask;
+            let num = 1;
+            while (mm) {
+                if (mm&1) retval += num;
+                num++;
+                mm >>= 1;
+            }
+            return retval;
+        }
+        setCannotHave(num) {
+            const mm = ((1<<9)-1) - (1 << (num-1));
+            this.mask &= mm;
+        }
+        setIs(num) {
+            const mm = (1 << (num-1));
+            //console.log('l228');  this.canHave(num);  // debug.  calling this just to use its internal consistency check.           
+            this.mask = mm;
+            //console.log('l231');  this.canHave(num);  // debug.  calling this just to use its internal consistency check.
+        }
+        canList() {
+            const retval = [];
+            let mm = this.mask;
+            let num = 1;
+            while (mm) {
+                if (mm&1) retval.push(num)
+                num++;
+                mm >>= 1;
+            }
+            return retval;
+        }
+        canComboList() {
+            let retval = [];
+            let mm = this.mask;
+            let num = 1;
+            while (mm) {
+                if (mm&1) {
+                    const numAlreadyThere = retval.length;
+                    retval.push(''+num)
+                    for (let i=0; i<numAlreadyThere; i++) {
+                        retval.push(retval[i]+num)
+                    }
+                }
+                num++;
+                mm >>= 1;
+            }
+            return retval;
+        }
+        singleton() {
+            let mm = this.mask;
+            if (mm===0) return 0;
+            if (mm<=16) {
+                if (mm===1) return 1;
+                if (mm===2) return 2;
+                if (mm===4) return 3;
+                if (mm===8) return 4;
+                if (mm===16) return 5;
+            } else {
+                if (mm===32) return 6;
+                if (mm===64) return 7;
+                if (mm===128) return 8;
+                if (mm===256) return 9;
+            }
+            return -1; // more than one possible value
+        }
+        resetToAllCan() {
+            this.mask = (1<<9)-1;
+        }
+        // copy() {
+        //     throw "test this"
+        //     const retval = new CellHints('copy');
+        //     const self = this;
+        //     throw new Error('TODO: confirm this ^^^ cloning works');
+        //     retval.mask = this.mask
+        //     return retval;
+        // }
+    }
+    // implement an iterator that enumerates all combinations of the provided list
+    class Combinator {
+        constructor(list0) {
+            if (list0.length>12) throw new Error('list is too long for this impl')
+            this.list0 = list0
+            this.counter1 = Math.floor(Math.random(1<<list0.length));  // random starting position
+            this.counter1 = 0;  // or fixed starting location
+            //console.log({list0})
+            this.counter = 0; 
+        }
+        done() {
+            const list0len = this.list0.length;
+            if (list0len==0) return true;
+            const listlen = 1<<list0len;
+            return (this.counter>=listlen)
+        }
+        next() {
+            if (this.done()) throw new Error('already done');
+            const list0len = this.list0.length;   // ex. 9
+            const listlen = 1<<list0len;          // ex. 512
+            //throw `l356 debig ${list0len}  ${listlen}`
+            const mask = (this.counter1+this.counter)%listlen;
+            const retval = [];
+            for (let listidx=0, msk=1;  listidx<list0len;  listidx++, msk*= 2 ) {
+                //console.log({listlen, mask, msk, listidx})
+                if (msk & mask) retval.push(this.list0[listidx])
+            }
+            this.counter++;
+            return retval;
+        }
+    }
+    class CellHintsGrid {
+        constructor() {
+            this.arr = Array(81)
+            for (let i=0; i<81; i++) {
+                this.arr[i] = new CellHints(`c${i}`);
+            }
+        }
+        print(prefix='',postfix='') {
+            console.log(prefix+JSON.stringify(this.arr)+postfix)
+        }
+        add(num,idx) {
+            //this.print('> ')
+            const row = Math.floor(idx / 9)
+            const col = idx % 9;
+            for (let idx0=0; idx0<9; idx0++) {
+                const idx1 = row*9+idx0;
+                if (idx1!==idx) this.arr[idx1].setCannotHave(num)
+                const idx2 = idx0*9+col;
+                if (idx2!==idx) this.arr[idx2].setCannotHave(num)
+            }
+            const idxOfBlock = Math.floor(row/3)*9*3 + Math.floor(col/3)*3
+            for (let offset2 of [0,1,2, 9,10,11, 18,19,20]) {
+                const idx3 = idxOfBlock + offset2;
+                if (idx3!==idx) this.arr[idx3].setCannotHave(num)
+            }
+            this.arr[idx].setIs(num)
+            //this.print('< ')
+        }
+        recalcFromCurrentGrid(currentGrid) {
+            for (let i=0; i<81; i++) {
+                this.arr[i].resetToAllCan();
+            }
+            for (let i=0; i<81; i++) {
+                const cval = currentGrid[i]
+                if (cval==0) continue;
+                this.add(cval,i);
+            }
+            // User should hit the 'h' key to optimize the hints further
+        }
+        // improve hints a bit based only on hints already calculated
+        optimize1() {
+            const self = this;
+            class RequestedRemovals {
+                constructor() {
+                    this.list = [];
+                }
+                addRemoval(idx, num) {
+                    this.list.push({idx,num})
+                }
+                processRemovals() {
+                    for (let rec of this.list) {
+                        const idx = rec.idx;
+                        const num = rec.num;
+                        const cellhints = self.arr[idx];
+                        cellhints.setCannotHave(num)
+                    }
+                }
+            }
+            function optimize3(message_prefix, indexes, requested_removals) {
+                // TODO: optimize3 can be slow.  improve upon that.  Ex. perhaps handle the singltons quickly and then handle the (now small) everything else.
+                // works on    
+                //   123, 123, 123 ...
+                //   123, 123, 12
+                //   123, 12, 12
+                //   123, 12, 1
+                //   1,   ...  
+                // later works on
+                //   123, 12, 125,   456, 456, 456, 456, 456...
+                //   1234, 1234, 1234    456789, 456789,  ....
+                // corrrectly fails to divide
+                //   123, 12, 125    124, 126,....
+                // fails to match
+                //
+                let indexcombos = new Combinator(indexes);
+                while (!indexcombos.done()) {
+                    //console.log({iter:cntiters++})
+                    const comboindices = indexcombos.next();
+
+                    if (comboindices.length===0) continue;
+                    if (comboindices.length===9) continue;
+                    let maskAll = 0;
+                    for (let index of comboindices) {
+                        //console.log({index})
+                        maskAll |= self.arr[index].mask;
+                    }
+                    const bitcount = countOfMaskBits(maskAll)
+                    if (bitcount===comboindices.length) {
+                        // remove these bits from other cells
+                        for (let idx3 of indexes) {
+                            if (comboindices.includes(idx3)) {
+                                // we'll leave our combo unchanged
+                            } else {
+                                // strip out the indexes we used.
+                                const cellhints = self.arr[idx3];
+                                for (let letter of maskToString(maskAll)) {
+                                    const num = parseInt(letter);
+                                    if (cellhints.canHave(num)) {
+                                        requested_removals.addRemoval(idx3,num)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            // improve effeciency by quickly handling the case of singletons and then removing them from consideration
+            for (let i=0; i<81; i++) {
+                const cellhints = self.arr[i];
+                const num = cellhints.singleton()
+                if (num>0) this.add(num,i);
+            }
+            // It's possible that our singleton processing above created more singletons, but the goal was just to find enough to make the following code somewhat more efficient.
+            
+            function singletons_of_list(indexes) {
+                const retval = [];
+                for (const index of indexes) if (self.arr[index].singleton()===-1) retval.push(index)
+                return retval;
+            }
+            const requested_removals = new RequestedRemovals();  // We want to limit the removals per an iteration to a few that a human can calculate, so we delay the actual removing until later.  This avoid removals that are inspired by an earlier removal.
+            // check columns
+            for (let col=0; col<9; col++) {
+                const idx1 = col;
+                const cells2 = [idx1+0, idx1+9, idx1+18,   idx1+27, idx1+36, idx1+45,  idx1+54, idx1+63, idx1+72]
+                optimize3(`col${col}: `, singletons_of_list(cells2), requested_removals);
+            }
+            // check rows
+            for (let row=0; row<9; row++) {
+                const idx1 = row*9;
+                const cells2 = [idx1+0, idx1+1, idx1+2,   idx1+3, idx1+4, idx1+5,  idx1+6, idx1+7, idx1+8]
+                optimize3(`row${row}: `, singletons_of_list(cells2), requested_removals);
+            }
+            // // check block
+            for (let blk=0; blk<9; blk++) {
+                const idx1 = (blk%3)*3 + Math.floor(blk/3)*27;
+                const cells2 = [idx1+0, idx1+1, idx1+2,   idx1+9, idx1+10, idx1+11,  idx1+18, idx1+19, idx1+20]
+                optimize3(`blk${blk}: `, singletons_of_list(cells2), requested_removals);
+            }
+            requested_removals.processRemovals();
+        }
+    }
+    class SudokuGame {
+        constructor() {
+            this.boardContainer = document.getElementById('sudoku-board');
+            this.selectedCell = null;
+            this.initialGrid = Array(81).fill(0); // Puzzles states
+            this.currentGrid = Array(81).fill(0); 
+            this.solutionGrid = Array(81).fill(0);
+            //this.cellHintsGrid = new CellHintsGrid();
+            this.initDOM();
+            this.setupEventListeners();
+            this.startNewGame();
+        }
+
+        initDOM() {
+            this.boardContainer.innerHTML = '';
+            for (let i = 0; i < 81; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.dataset.index = i;    
+                const row = Math.floor(i / 9);
+                cell.classList.add(`cell-row-${row}`);
+                this.boardContainer.appendChild(cell);
+            }
+        }
+
+        setupEventListeners() {
+            // Cell Selection
+            this.boardContainer.addEventListener('click', (e) => {
+                const cell = e.target.closest('.cell');
+                if (!cell || cell.classList.contains('fixed')) return;
+                this.selectCell(cell);
+            });
+
+            // On-screen Numpad
+            document.querySelector('.numpad').addEventListener('click', (e) => {
+                const btn = e.target.closest('.num-btn');
+                if (btn.dataset.val==='u') {
+                    this.handleInput('u');
+                } else if (btn.dataset.val==='h') {
+                    this.handleInput('h');
+                } else {
+                    if (!btn || !this.selectedCell) return;
+                    this.handleInput(parseInt(btn.dataset.val));
+                }
+            });
+
+            // Physical Keyboard Support
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'h') {
+                    this.handleInput('h');
+                } else if (e.key === 'u') {
+                    this.handleInput('u');
+                } else {
+                    if (!this.selectedCell) return;
+                    if (e.key >= '1' && e.key <= '9') {
+                        this.handleInput(parseInt(e.key));
+                    } else if (e.key === 'Backspace' || e.key === 'Delete' || e.key === '0') {
+                        this.handleInput(0);
+                    }
+                }
+            });
+
+            // Difficulty & New Game Elements
+            document.getElementById('new-game-btn').addEventListener('click', () => this.startNewGame());
+        }
+
+        recalcHintsGrid() {
+            this.cellHintsGrid.recalcFromCurrentGrid(this.currentGrid);
+        }
+
+        selectCell(cell) {
+            if (this.selectedCell) {
+                this.selectedCell.classList.remove('selected');
+            }
+            this.selectedCell = cell;
+            cell.classList.add('selected');
+            this.highlightRelatedCells(parseInt(cell.dataset.index));
+        }
+
+        highlightRelatedCells(index) {
+            const cells = this.boardContainer.querySelectorAll('.cell');
+            const targetRow = Math.floor(index / 9);
+            const targetCol = index % 9;
+            const targetBoxRow = Math.floor(targetRow / 3) * 3;
+            const targetBoxCol = Math.floor(targetCol / 3) * 3;
+
+            cells.forEach((cell, i) => {
+                cell.classList.remove('highlighted');
+                const r = Math.floor(i / 9);
+                const c = i % 9;
+                const br = Math.floor(r / 3) * 3;
+                const bc = Math.floor(c / 3) * 3;
+
+                if (i !== index && (r === targetRow || c === targetCol || (br === targetBoxRow && bc === targetBoxCol))) {
+                    cell.classList.add('highlighted');
+                }
+            });
+        }
+
+        handleInput(value) {
+            if (value === 'h') {
+                this.cellHintsGrid.optimize1();
+            } else {
+                let targetIndex;
+                if (value === 'u') {
+                    if (this.undoSteps.length===0) {
+                        console.error("nothing more to undo")
+                        return;
+                    }
+                    const popval = this.undoSteps.pop();
+                    value = popval.oldValue;
+                    targetIndex = popval.index;
+                } else {
+                    if (!this.selectedCell) return;
+                    const index = parseInt(this.selectedCell.dataset.index);
+                    targetIndex = index;
+                    const oldValue = this.currentGrid[index];
+                    this.undoSteps.push({index,oldValue});
+                }
+                const selectedIndex = this.selectedCell && parseInt(this.selectedCell.dataset.index);
+                if (value === 0) {
+                    this.currentGrid[targetIndex] = 0;
+                } else {
+                    this.currentGrid[targetIndex] = value;
+                }
+                this.checkWinCondition();
+                this.recalcHintsGrid();
+            }
+            this.rerenderBoard()
+        }
+        isValidMove(grid, index, val) {
+            const row = Math.floor(index / 9);
+            const col = index % 9; // Check Row & Column duplicates
+            for (let i = 0; i < 9; i++) {
+              const rIndex = row * 9 + i;
+              if (rIndex !== index && grid[rIndex] === val) return false;
+              const cIndex = i * 9 + col;
+              if (cIndex !== index && grid[cIndex] === val) return false;
+            }
+            // Check 3x3 Block duplicates
+            const boxRow = Math.floor(row / 3) * 3;
+            const boxCol = Math.floor(col / 3) * 3;
+            for (let r = 0; r < 3; r++) {
+              for (let c = 0; c < 3; c++) { 
+                // Bound structural check logic loop inside limits
+                const bIndex = (boxRow + r) * 9 + (boxCol + c);
+                if (bIndex !== index && grid[bIndex] === val) return false;
+              }
+            }
+            return true;
+        }
+        startNewGame() {
+          // Reset Selections
+          if (this.selectedCell) this.selectedCell.classList.remove('selected');
+          this.selectedCell = null;
+          // Generate Board Solvable Structure Matrix
+          this.generateSudoku();
+          this.undoSteps = [];
+          const difficulty = document.getElementById('difficulty').value;
+          if (difficulty==='game1') {
+            this.initialGrid = [
+                2, 5, 9,  0, 4, 6,  0, 0, 0,
+                0, 0, 0,  5, 8, 7,  1, 9, 0,
+                0, 1, 0,  3, 9, 2,  0, 0, 6,
+
+                0, 3, 5,  9, 2, 0,  7, 0, 0,
+                0, 9, 0,  4, 7, 0,  3, 8, 0,
+                0, 7, 0,  0, 0, 3,  0, 0, 9, 
+
+                0, 6, 0,  0, 0, 0,  0, 1, 8,
+                9, 0, 0,  7, 0, 0,  0, 2, 0, 
+                5, 2, 0,  0, 1, 0,  0, 0, 0
+            ]
+          } else if (difficulty==='game1.1') {
+            this.initialGrid = [
+                2, 5, 9,  1, 4, 6,  8, 0, 0,
+                0, 4, 0,  5, 8, 7,  1, 9, 0,
+                0, 1, 0,  3, 9, 2,  0, 0, 6,
+
+                0, 3, 5,  9, 2, 0,  7, 0, 0,
+                0, 9, 0,  4, 7, 0,  3, 8, 0,
+                0, 7, 0,  0, 0, 3,  0, 0, 9, 
+
+                0, 6, 0,  0, 0, 0,  0, 1, 8,
+                9, 0, 0,  7, 0, 0,  0, 2, 0, 
+                5, 2, 0,  0, 1, 0,  0, 0, 0
+            ]
+          } else if (difficulty==='game1.1.1') {
+            this.initialGrid = [
+                2, 5, 9,  1, 4, 6,  8, 0, 0,  // only good is 3, 7,  not 7, 3.  But can you quickly spot why?
+                3, 4, 6,  5, 8, 7,  1, 9, 2,
+                0, 1, 0,  3, 9, 2,  0, 0, 6,  // only good move is 4,5,  not 5,4, but can you quickly spot why?
+
+                0, 3, 5,  9, 2, 0,  7, 6, 0,
+                6, 9, 2,  4, 7, 0,  3, 8, 0,
+                1, 7, 0,  0, 0, 3,  2, 0, 9, 
+
+                0, 6, 0,  2, 0, 0,  0, 1, 8,
+                9, 8, 1,  7, 0, 0,  0, 2, 0, 
+                5, 2, 0,  0, 1, 0,  0, 0, 0
+            ]
+          } else {
+            let cellsToRemove = 40; 
+            // Medium default
+            if (difficulty === 'easy') cellsToRemove = 30;
+            if (difficulty === 'hard') cellsToRemove = 52;
+            // Mirror solution grid
+            this.initialGrid = [...this.solutionGrid];
+            // Pluck values to match target difficulties
+            let indices = createScrambled0BasedNumberArray(81)
+            for (let i = 0; i < cellsToRemove; i++) {this.initialGrid[indices[i]] = 0;}
+          }
+          this.currentGrid = [...this.initialGrid];
+          this.cellHintsGrid = new CellHintsGrid();
+          this.renderBoard();
+          this.recalcHintsGrid(this.currentGrid)
+          this.rerenderBoard();
+        }
+        renderBoard() {
+          const cells = this.boardContainer.querySelectorAll('.cell');
+          cells.forEach((cell, i) => {
+            cell.className = 'cell'; 
+            // reset classes
+            const row = Math.floor(i / 9);
+            cell.classList.add(`cell-row-${row}`);
+            const val = this.currentGrid[i];
+            if (val !== 0) {
+              cell.innerHTML = ''
+              cell.textContent = val;
+              if (this.initialGrid[i] !== 0) {
+                cell.classList.add('fixed');
+              }
+            } else {
+              cell.textContent = '';
+            }
+          });
+        }
+        rerenderBoard() {
+          const cells = this.boardContainer.querySelectorAll('.cell');
+          cells.forEach((cell, i) => {
+            const val = this.currentGrid[i];
+            if (val !== 0) {
+              if (!this.isValidMove(this.currentGrid, i, val)) {
+                  cell.classList.add('error');
+              } else {   
+                  cell.classList.remove('error');
+              }
+              cell.classList.remove('empty-cell')
+              cell.classList.add('non-empty-cell')
+              cell.innerHTML = ''
+              cell.textContent = val;
+              if (this.initialGrid[i] !== 0) {
+                cell.classList.add('fixed');
+              }
+            } else {
+              cell.classList.remove('non-empty-cell')
+              cell.classList.add('empty-cell')
+              cell.innerHTML = ''
+              const cellhints = this.cellHintsGrid.arr[i];
+              var cantLetter = '.'
+              if (cellhints.mask===0) {
+                  cell.classList.add('error');
+                  cantLetter = 'x'
+              } else {
+                  cell.classList.remove('error');
+              }
+              for (let j=0; j<9; j++) {
+                  const hintcell = document.createElement('div')
+                  hintcell.classList.add('hintcell');
+                  hintcell.dataset.index = j;
+                  hintcell.innerText = cellhints.canHave(j+1) ? 'g' : cantLetter;
+                  cell.appendChild(hintcell)
+              }
+            }
+          });
+        }
+        /*  Backtracking Sudoku Generator & Solver Engine */
+        generateSudoku() {
+          this.solutionGrid = Array(81).fill(0);
+          this.fillDiagonalBlocks();
+          this.solve(this.solutionGrid);
+        }
+        fillDiagonalBlocks() {
+          for (let i = 0; i < 9; i += 3) {
+            const nums = [1,2,3,4,5,6,7,8,9].sort(() => Math.random() - 0.5);
+            let counter = 0;
+            for (let r = 0; r < 3; r++) {
+              for (let c = 0; c < 3; c++) {
+                this.solutionGrid[(i + r) * 9 + (i + c)] = nums[counter++];
+              }
+            }
+          }
+        }
+        solve(grid) {
+          for (let i = 0; i < 81; i++) {
+            if (grid[i] === 0) {
+              const nums = [1,2,3,4,5,6,7,8,9].sort(() => Math.random() - 0.5);
+              for (let num of nums) {
+                if (this.isValidMove(grid, i, num)) {
+                  grid[i] = num;
+                  if (this.solve(grid)) return true;
+                  grid[i] = 0;
+                }
+              }
+              return false;
+            }
+          }
+          return true;
+        }
+        removeCellWithOnlyOneCorrectOption() {
+        }
+        checkWinCondition() {
+          // A grid is complete if there are no zeros and no cells with active .error classes
+          const hasZero = this.currentGrid.includes(0);
+          const hasErrors = this.boardContainer.querySelectorAll('.cell.error').length 
+          > 0;
+          if (!hasZero && !hasErrors) {
+            setTimeout(() => {alert('🎉 Congratulations! You solved the Sudoku puzzle perfectly!');}, 200);
+          }
+        }
+    }  // end class
+    // Initialize application execution on load
+    document.addEventListener('DOMContentLoaded', () => {new SudokuGame();});
+    
+/*
+    ### Key Features Integrated
+
+* **True Matrix Generation**: Rather than pulling from static arrays, the JavaScript uses a backtracking algorithm combined with mixed seed diagonals to produce dynamic, solvable layouts every time.
+* **Responsive Visual Scannability**: Thicker layout parameters segment the `3x3` boxes using customized CSS boundary selectors.
+* **Dual Input Utility**: Seamless interaction via mobile layout on-screen numbers or native desktop keyboard shortcuts (`1-9` to write, `Backspace`/`Delete`/`0` to erase numbers).
+* **Cross-Highlighting**: Selecting an editable white cell automatically applies subtle contrast lines on intersecting parameters (Row, Column, and Sub-box contexts) to optimize placement navigation. 
+*/
+</script>
+</head>
+<body>
+
+
+<div class="container">
+    <h1>Sudoku</h1>
+    
+    <div class="controls">
+        <select id="difficulty">
+            <option value="easy">Easy</option>
+            <option value="medium" selected>Medium</option>
+            <option value="hard">Hard</option>
+            <option value="game1">Game 1</option>
+            <option value="game1.1">Game 1.1</option>
+            <option value="game1.1.1">Game 1.1.1</option>
+        </select>
+        <button class="primary" id="new-game-btn">New Game</button>
+    </div>
+
+    <div class="board" id="sudoku-board"></div>
+
+    <div class="numpad">
+        <button class="num-btn" data-val="1">1</button>
+        <button class="num-btn" data-val="2">2</button>
+        <button class="num-btn" data-val="3">3</button>
+        <button class="num-btn" data-val="4">4</button>
+        <button class="num-btn" data-val="5">5</button>
+        <button class="num-btn" data-val="6">6</button>
+        <button class="num-btn" data-val="7">7</button>
+        <button class="num-btn" data-val="8">8</button>
+        <button class="num-btn" data-val="9">9</button>
+        <button class="num-btn clear-btn" data-val="0">X</button>
+        <button class="num-btn" data-val="o">(h)int</button>
+        <button class="num-btn" data-val="u">(u)ndo</button>
+    </div>
+</div>
+
+
+</body>
