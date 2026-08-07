@@ -246,9 +246,7 @@
     }
     function stringToMask(str) {
         let retval = 0;
-        //console.log({str})
         for (let letter of str) {
-            //console.log({letter})
             retval |= 1<<(parseInt(letter)-1)
         }
         return retval;
@@ -291,9 +289,7 @@
         }
         setIs(num) {
             const mm = (1 << (num-1));
-            //console.log('l228');  this.canHave(num);  // debug.  calling this just to use its internal consistency check.           
             this.mask = mm;
-            //console.log('l231');  this.canHave(num);  // debug.  calling this just to use its internal consistency check.
         }
         canList() {
             const retval = [];
@@ -359,7 +355,6 @@
             this.list0 = list0
             this.counter1 = Math.floor(Math.random(1<<list0.length));  // random starting position
             this.counter1 = 0;  // or fixed starting location
-            //console.log({list0})
             this.counter = 0; 
         }
         done() {
@@ -376,7 +371,6 @@
             const mask = (this.counter1+this.counter)%listlen;
             const retval = [];
             for (let listidx=0, msk=1;  listidx<list0len;  listidx++, msk*= 2 ) {
-                //console.log({listlen, mask, msk, listidx})
                 if (msk & mask) retval.push(this.list0[listidx])
             }
             this.counter++;
@@ -458,14 +452,12 @@
                 //
                 let indexcombos = new Combinator(indexes);
                 while (!indexcombos.done()) {
-                    //console.log({iter:cntiters++})
                     const comboindices = indexcombos.next();
 
                     if (comboindices.length===0) continue;
                     if (comboindices.length===9) continue;
                     let maskAll = 0;
                     for (let index of comboindices) {
-                        //console.log({index})
                         maskAll |= self.arr[index].mask;
                     }
                     const bitcount = countOfMaskBits(maskAll)
@@ -888,7 +880,7 @@
         <button class="num-btn" data-val="8">8</button>
         <button class="num-btn" data-val="9">9</button>
         <button class="num-btn clear-btn" data-val="0">X</button>
-        <button class="num-btn" data-val="o">(h)int</button>
+        <button class="num-btn" data-val="h">(h)int</button>
         <button class="num-btn" data-val="u">(u)ndo</button>
     </div>
 </div>
