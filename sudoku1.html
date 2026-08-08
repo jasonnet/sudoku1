@@ -32,162 +32,165 @@
         body {
             background-color: var(--bg-color);
             color: var(--text-color);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            padding: 10px;
+
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
+
         }
 
-        .container {
-            background: var(--container-bg);
-            padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-            text-align: center;
-            max-width: 400px;
-            width: 100%;
-        }
+            .container {   /* there will be just one container, inside the body */
+                display: flex;
+                flex-direction: column;   /* the main access is vertical */
+                align-items: center;      /* center each item horizontally (the cross axis) */
+                justify-content: center;   /* how to space out vertically (the main axis).  But we have just one element (the content) so it might not matter. */
 
-        h1 {
-            margin-bottom: 10px;
-            font-size: 28px;
-            letter-spacing: 1px;
-        }
+                background: var(--container-bg);
+                padding: 2%; /*25px;*/
+                border-radius: 12px;
+                box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+                text-align: center;
+                width: 100%;
+            }
 
-        .controls {
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-        }
+                h1 {
+                    margin-bottom: 1%; /*10px;*/
+                    font-size: 28px;
+                    letter-spacing: 1px;
+                }
 
-        select, button {
-            padding: 8px 16px;
-            font-size: 14px;
-            border-radius: 6px;
-            border: 1px solid var(--light-border);
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
+                .controls {
+                    margin-bottom: 20px;
+                    display: flex;
+                    justify-content: center;
+                    gap: 10px;
+                }
 
-        select {
-            background-color: white;
-        }
+                    select, button {
+                        padding: 8px 16px;
+                        font-size: 14px;
+                        border-radius: 6px;
+                        border: 1px solid var(--light-border);
+                        cursor: pointer;
+                        transition: all 0.2s ease;
+                    }
 
-        button.primary {
-            background-color: var(--primary-btn);
-            color: white;
-            border: none;
-        }
+                    select {
+                        background-color: white;
+                    }
 
-        button.primary:hover {
-            background-color: var(--primary-btn-hover);
-        }
+                    button.primary {
+                        background-color: var(--primary-btn);
+                        color: white;
+                        border: none;
+                    }
 
-        /* 9x9 Grid Layout */
-        .board {
-            display: grid;
-            grid-template-columns: repeat(9, 1fr);
-            grid-template-rows: repeat(9, 1fr);
-            border: 3px solid var(--border-color);
-            width: 100%;
-            aspect-ratio: 1 / 1;
-            margin-bottom: 20px;
-            background-color: var(--border-color);
-            gap: 1px;
-        }
+                    button.primary:hover {
+                        background-color: var(--primary-btn-hover);
+                    }
 
-        .cell {
-            background-color: white;
-            align-items: center;
-            justify-content: center;
-            font-size: calc(1.5rem + 0.5vw);
-            font-weight: bold;
-            cursor: pointer;
-            user-select: none;
-            transition: background-color 0.15s ease;
-        }
+                /* 9x9 Grid Layout */
+                .board {
+                    display: grid;
+                    grid-template-columns: repeat(9, 1fr);
+                    grid-template-rows: repeat(9, 1fr);
+                    border: 3px solid var(--border-color);
+                    width: 100%;
+                    margin-bottom: 2%; /*20px;*/
+                    background-color: var(--border-color);
+                    gap: 1px;
+                }
 
-        .empty-cell {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            grid-template-rows: repeat(3, 1fr)
-        }
-        .non-empty-cell {
-            display: flex;
-        }
+                    .cell {
+                        background-color: white;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: calc(0.8rem + 0.2vw);
+                        font-weight: bold;
+                        cursor: pointer;
+                        user-select: none;
+                        transition: background-color 0.15s ease;
+                    }
 
-        .hintcell {
-            background-color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: calc(0.5rem + 0.15vw);
-            font-weight: bold;
-            cursor: pointer;
-            user-select: none;
-            transition: background-color 0.15s ease;
-        }
+                    .empty-cell {
+                        display: grid;
+                        grid-template-columns: repeat(3, 1fr);
+                        grid-template-rows: repeat(3, 1fr)
+                    }
+                        .hintcell {
+                            background-color: white;
+                            font-size: calc(0.5rem + 0.15vw);
+                            /*font-weight: bold;*/
+                            cursor: pointer;
+                            user-select: none;
+                            transition: background-color 0.15s ease;
+                        }
+                    .non-empty-cell {
+                        display: flex;
+                    }
 
-        /* Thick borders for 3x3 blocks */
-        .cell:nth-child(3n) {
-            border-right: 2px solid var(--border-color);
-        }
-        .cell:nth-child(9n) {
-            border-right: none;
-        }
-        .cell-row-2, .cell-row-5 {
-            border-bottom: 2px solid var(--border-color);
-        }
 
-        /* Interactive Cell States */
-        .cell.fixed {
-            background-color: var(--fixed-bg);
-            color: #555;
-            cursor: not-allowed;
-        }
-        .cell.selected {
-            background-color: var(--selected-bg) !important;
-        }
-        .cell.highlighted {
-            background-color: var(--highlight-bg);
-        }
-        .cell.error {
-            color: var(--error-color);
-            animation: shake 0.2s ease-in-out;
-        }
+                    /* Thick borders for 3x3 blocks */
+                    .cell:nth-child(3n) {
+                        border-right: 2px solid var(--border-color);
+                    }
+                    .cell:nth-child(9n) {
+                        border-right: none;
+                    }
+                    .cell-row-2, .cell-row-5 {
+                        border-bottom: 2px solid var(--border-color);
+                    }
 
-        /* Numpad Input Panel */
-        .numpad {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 8px;
-            width: 100%;
-        }
+                    /* Interactive Cell States */
+                    .cell.fixed {
+                        background-color: var(--fixed-bg);
+                        color: #555;
+                        cursor: not-allowed;
+                    }
+                    .cell.selected {
+                        background-color: var(--selected-bg) !important;
+                    }
+                    .cell.highlighted {
+                        background-color: var(--highlight-bg);
+                    }
+                    .cell.error {
+                        color: var(--error-color);
+                        animation: shake 0.2s ease-in-out;
+                    }
 
-        .num-btn {
-            background-color: #f8f9fa;
-            border: 1px solid var(--light-border);
-            padding: 12px;
-            font-size: 18px;
-            font-weight: bold;
-            border-radius: 6px;
-        }
+                /* Numpad Input Panel */
+                .numpad {
+                    display: grid;
+                    grid-template-columns: repeat(5, 1fr);
+                    grid-template-rows: repeat(3, 1fr);
+                    gap: 2px;
+                    width: 100%;
+                }
 
-        .num-btn:hover {
-            background-color: #e9ecef;
-        }
+                    .num-btn {
+                        background-color: #f8f9fa;
+                        border: 1px solid var(--light-border);
+                        padding: 2%; /*12px;*/
+                        font-size: 15px;
+                        font-weight: bold;
+                        border-radius: 6px;
+                    }
 
-        .num-btn.clear-btn {
-            grid-column: span 1;
-            background-color: #fadbd8;
-            color: #c0392b;
-        }
-        .num-btn.clear-btn:hover {
-            background-color: #f5b7b1;
-        }
+                    .num-btn:hover {
+                        background-color: #e9ecef;
+                    }
+
+                    .num-btn.clear-btn {
+                        grid-column: span 1;
+                        background-color: #fadbd8;
+                        color: #c0392b;
+                    }
+                    .num-btn.clear-btn:hover {
+                        background-color: #f5b7b1;
+                    }
 
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
