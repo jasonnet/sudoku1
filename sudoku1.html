@@ -55,12 +55,13 @@
                 box-shadow: 0 8px 24px rgba(0,0,0,0.1);
                 text-align: center;
                 width: 100%;
+                max-width: 1000px;
                 height: 100%;
             }
 
                 h1 {
                     margin-bottom: 1%; /*10px;*/
-                    font-size: 28px;
+                    font-size: 16pt;
                     letter-spacing: 1px;
                 }
 
@@ -101,6 +102,7 @@
                     grid-template-rows: repeat(9, 1fr);
                     border: 3px solid var(--border-color);
                     width: 100%;
+                    aspect-ratio: 1 / 1; 
                     margin-bottom: 1%; /*20px;*/
                     background-color: var(--border-color);
                     gap: 1px;
@@ -110,7 +112,7 @@
                         background-color: white;
                         align-items: center;
                         justify-content: center;
-                        font-size: calc(0.8rem + 0.2vw);
+                        font-size: calc(1.2rem + 0.3vw);
                         font-weight: bold;
                         cursor: pointer;
                         user-select: none;
@@ -124,7 +126,7 @@
                     }
                         .hintcell {
                             background-color: white;
-                            font-size: calc(0.5rem + 0.15vw);
+                            font-size: calc(0.6rem + 0.15vw);
                             /*font-weight: bold;*/
                             cursor: pointer;
                             user-select: none;
@@ -790,7 +792,7 @@
                   const hintcell = document.createElement('div')
                   hintcell.classList.add('hintcell');
                   hintcell.dataset.index = j;
-                  hintcell.innerText = cellhints.canHave(j+1) ? 'g' : cantLetter;
+                  hintcell.innerText = cellhints.canHave(j+1) ? 'o' : cantLetter;
                   cell.appendChild(hintcell)
               }
             }
