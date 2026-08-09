@@ -3,205 +3,12 @@
 <head>
     <!-- add Manifest descriptor -->
     <link rel="manifest" href="./manifest.json">
+    <link rel="stylesheet"  media="all and (orientation:portrait)" href="portrait.css">
+    <link rel="stylesheet"  media="all and (orientation:landscape)" href="landscape.css">
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Web Sudoku App</title>
-    <style>
-        :root {
-            --bg-color: #f0f2f5;
-            --container-bg: #ffffff;
-            --border-color: #333333;
-            --light-border: #cccccc;
-            --text-color: #2c3e50;
-            --fixed-bg: #f8f9fa;
-            --selected-bg: #b3d4fc;
-            --highlight-bg: #e2f0fd;
-            --error-color: #e74c3c;
-            --primary-btn: #3498db;
-            --primary-btn-hover: #2980b9;
-        }
-
-        * {
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 0;
-            user-select: none;
-        }
-
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-color);
-
-            margin: 0;
-            padding: 0;
-            width: 100vw;
-            height: 100vh;
-            height: 100dvh;
-            overflow: hidden;
-
-        }
-
-            .container {   /* there will be just one container, inside the body */
-                display: flex;
-                flex-direction: column;   /* the main access is vertical */
-                align-items: center;      /* center each item horizontally (the cross axis) */
-                justify-content: space-between;/*center;*/   /* how to space out vertically (the main axis).  But we have just one element (the content) so it might not matter. */
-
-                background: var(--container-bg);
-                padding: 2%; /*25px;*/
-                border-radius: 12px;
-                box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-                text-align: center;
-                width: 100%;
-                max-width: 1000px;
-                height: 100%;
-            }
-
-                h1 {
-                    margin-bottom: 1%; /*10px;*/
-                    font-size: 16pt;
-                    letter-spacing: 1px;
-                }
-
-                .controls {
-                    margin-bottom: 20px;
-                    display: flex;
-                    justify-content: center;
-                    gap: 10px;
-                }
-
-                    select, button {
-                        padding: 8px 16px;
-                        font-size: 14px;
-                        border-radius: 6px;
-                        border: 1px solid var(--light-border);
-                        cursor: pointer;
-                        transition: all 0.2s ease;
-                    }
-
-                    select {
-                        background-color: white;
-                    }
-
-                    button.primary {
-                        background-color: var(--primary-btn);
-                        color: white;
-                        border: none;
-                    }
-
-                    button.primary:hover {
-                        background-color: var(--primary-btn-hover);
-                    }
-
-                /* 9x9 Grid Layout */
-                .board {
-                    display: grid;
-                    grid-template-columns: repeat(9, 1fr);
-                    grid-template-rows: repeat(9, 1fr);
-                    border: 3px solid var(--border-color);
-                    width: 100%;
-                    aspect-ratio: 1 / 1; 
-                    margin-bottom: 1%; /*20px;*/
-                    background-color: var(--border-color);
-                    gap: 1px;
-                }
-
-                    .cell {
-                        background-color: white;
-                        align-items: center;
-                        justify-content: center;
-                        font-size: calc(1.2rem + 0.3vw);
-                        font-weight: bold;
-                        cursor: pointer;
-                        user-select: none;
-                        transition: background-color 0.15s ease;
-                    }
-
-                    .empty-cell {
-                        display: grid;
-                        grid-template-columns: repeat(3, 1fr);
-                        grid-template-rows: repeat(3, 1fr)
-                    }
-                        .hintcell {
-                            background-color: white;
-                            font-size: calc(0.6rem + 0.15vw);
-                            /*font-weight: bold;*/
-                            cursor: pointer;
-                            user-select: none;
-                            transition: background-color 0.15s ease;
-                        }
-                    .non-empty-cell {
-                        display: flex;
-                    }
-
-
-                    /* Thick borders for 3x3 blocks */
-                    .cell:nth-child(3n) {
-                        border-right: 2px solid var(--border-color);
-                    }
-                    .cell:nth-child(9n) {
-                        border-right: none;
-                    }
-                    .cell-row-2, .cell-row-5 {
-                        border-bottom: 2px solid var(--border-color);
-                    }
-
-                    /* Interactive Cell States */
-                    .cell.fixed {
-                        background-color: var(--fixed-bg);
-                        color: #555;
-                        cursor: not-allowed;
-                    }
-                    .cell.selected {
-                        background-color: var(--selected-bg) !important;
-                    }
-                    .cell.highlighted {
-                        background-color: var(--highlight-bg);
-                    }
-                    .cell.error {
-                        color: var(--error-color);
-                        animation: shake 0.2s ease-in-out;
-                    }
-
-                /* Numpad Input Panel */
-                .numpad {
-                    display: grid;
-                    grid-template-columns: repeat(5, 1fr);
-                    grid-template-rows: repeat(3, 1fr);
-                    gap: 2px;
-                    width: 100%;
-                }
-
-                    .num-btn {
-                        background-color: #f8f9fa;
-                        border: 1px solid var(--light-border);
-                        padding: 2%; /*12px;*/
-                        font-size: 15px;
-                        font-weight: bold;
-                        border-radius: 6px;
-                    }
-
-                    .num-btn:hover {
-                        background-color: #e9ecef;
-                    }
-
-                    .num-btn.clear-btn {
-                        grid-column: span 1;
-                        background-color: #fadbd8;
-                        color: #c0392b;
-                    }
-                    .num-btn.clear-btn:hover {
-                        background-color: #f5b7b1;
-                    }
-
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-4px); }
-            75% { transform: translateX(4px); }
-        }
-    </style>
 
 <script>
         if ('serviceWorker' in navigator) {
@@ -860,37 +667,72 @@
 
 
 <div class="container">
-    <h1>Sudoku</h1>
+    <h1 id="h1sudoku">Sudoku</h1>
     
-    <div class="controls">
-        <select id="difficulty">
-            <option value="easy">Easy</option>
-            <option value="medium" selected>Medium</option>
-            <option value="hard">Hard</option>
-            <option value="game1">Game 1</option>
-            <option value="game1.1">Game 1.1</option>
-            <option value="game1.1.1">Game 1.1.1</option>
-        </select>
-        <button class="primary" id="new-game-btn">New Game</button>
+    <div id="gamecontainer-portrait">
+        <div id="gamecontrols" class="controls">
+            <select id="difficulty">
+                <option value="easy">Easy</option>
+                <option value="medium" selected>Medium</option>
+                <option value="hard">Hard</option>
+                <option value="game1">Game 1</option>
+                <option value="game1.1">Game 1.1</option>
+                <option value="game1.1.1">Game 1.1.1</option>
+            </select>
+            <button class="primary" id="new-game-btn">New Game</button>
+        </div>
     </div>
 
     <div class="board" id="sudoku-board"></div>
 
-    <div class="numpad">
-        <button class="num-btn" data-val="1">1</button>
-        <button class="num-btn" data-val="2">2</button>
-        <button class="num-btn" data-val="3">3</button>
-        <button class="num-btn" data-val="4">4</button>
-        <button class="num-btn" data-val="5">5</button>
-        <button class="num-btn" data-val="6">6</button>
-        <button class="num-btn" data-val="7">7</button>
-        <button class="num-btn" data-val="8">8</button>
-        <button class="num-btn" data-val="9">9</button>
-        <button class="num-btn clear-btn" data-val="0">X</button>
-        <button class="num-btn" data-val="h">(h)int</button>
-        <button class="num-btn" data-val="u">(u)ndo</button>
+    <div class="control2">
+        <div id="gamecontainer-landscape">
+        </div>
+        <div class="numpad">
+            <button class="num-btn" data-val="1">1</button>
+            <button class="num-btn" data-val="2">2</button>
+            <button class="num-btn" data-val="3">3</button>
+            <button class="num-btn" data-val="4">4</button>
+            <button class="num-btn" data-val="5">5</button>
+            <button class="num-btn" data-val="6">6</button>
+            <button class="num-btn" data-val="7">7</button>
+            <button class="num-btn" data-val="8">8</button>
+            <button class="num-btn" data-val="9">9</button>
+            <button class="num-btn clear-btn" data-val="0">X</button>
+            <button class="num-btn" data-val="h">(h)int</button>
+            <button class="num-btn" data-val="u">(u)ndo</button>
+        </div>
     </div>
 </div>
 
 
 </body>
+<script>
+    const mql = window.matchMedia("(orientation: landscape)");
+    console.log({mql})
+    function handleOrientation(e) {
+        console.log('changing orientation')
+        const h1Element = document.getElementById("h1sudoku");
+        console.log({h1Element})
+        const gameElement = document.getElementById("gamecontrols");
+        const containerPElement = document.getElementById("gamecontainer-portrait");
+        const containerLElement = document.getElementById("gamecontainer-landscape");
+        if (e.matches) {
+            // Code for landscape mode
+            containerLElement.prepend(h1Element, gameElement)
+            //myElement.textContent = "Landscape Mode Active";
+            //myElement.classList.add("landscape-class");
+        } else {
+            // Code for portrait mode
+            containerPElement.prepend(h1Element,gameElement)
+            //myElement.textContent = "Portrait Mode Active";
+            //myElement.classList.remove("landscape-class");
+        }
+    }
+    // Run on load
+    handleOrientation(mql);
+
+    // Listen for future changes
+    mql.addEventListener("change", handleOrientation);
+</script>
+</html>
