@@ -1,12 +1,16 @@
 'use strict';
 // Cache store name to save static resources
-const CACHE_STATIC = 'static-cache-v6';
+const CACHE_STATIC = 'static-cache-v7';
 // Minimal set of files to cache to be a PWA
 const FILES_TO_CACHE = [
     './',
     './favicon.ico',
     './img/favicon-512.png',
+    './img/favicon-180.png',
+    './img/favicon-192.png',
     './sudoku1.html',
+    './portrait.css',
+    './landscape.css',
     './manifest.json',
 ];
 
