@@ -118,12 +118,11 @@
                         grid-template-rows: repeat(3, 1fr)
                     }
                         .hintcell {
-                            background-color: white;
-                            font-size: calc(0.0rem + 1.0vw);
+                            font-size: calc(0.6rem + 0.1vw);  /* we don't want to make this a function of the vw because it can be very wide or only somewhat wide and that would impact visibility of these characters. */
                             /*font-weight: bold;*/
                             cursor: pointer;
                             user-select: none;
-                            /*transition: background-color 0.15s ease;*/
+                            transition: background-color 0.15s ease;
                         }
                     .non-empty-cell {
                         display: flex;

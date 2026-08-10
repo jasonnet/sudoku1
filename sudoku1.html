@@ -197,6 +197,7 @@
             for (let i=0; i<81; i++) {
                 this.arr[i] = new CellHints(`c${i}`);
             }
+            this.resetToAllCan();
         }
         print(prefix='',postfix='') {
             console.log(prefix+JSON.stringify(this.arr)+postfix)
@@ -219,16 +220,28 @@
             this.arr[idx].setIs(num)
             //this.print('< ')
         }
-        recalcFromCurrentGrid(currentGrid) {
+        resetToAllCan() {
             for (let i=0; i<81; i++) {
                 this.arr[i].resetToAllCan();
             }
+            this.level = 0;
+        }
+        recalcFromCurrentGrid(currentGrid) {
+            this.resetToAllCan();
             for (let i=0; i<81; i++) {
                 const cval = currentGrid[i]
                 if (cval==0) continue;
                 this.add(cval,i);
             }
+            this.level++;
             // User should hit the 'h' key to optimize the hints further
+        }
+        gotoNextOptimizeLevel(currentGrid) {
+            if (this.level===0) {
+                this.recalcFromCurrentGrid(currentGrid);
+            } else {
+                this.optimize1();
+            }
         }
         // improve hints a bit based only on hints already calculated
         optimize1() {
@@ -239,6 +252,9 @@
                 }
                 addRemoval(idx, num) {
                     this.list.push({idx,num})
+                }
+                isEmpty() {
+                    return this.list.length===0;
                 }
                 processRemovals() {
                     for (let rec of this.list) {
@@ -326,7 +342,14 @@
                 const cells2 = [idx1+0, idx1+1, idx1+2,   idx1+9, idx1+10, idx1+11,  idx1+18, idx1+19, idx1+20]
                 optimize3(`blk${blk}: `, singletons_of_list(cells2), requested_removals);
             }
-            requested_removals.processRemovals();
+            if (requested_removals.isEmpty()) {
+                // our optimizer can't do any better.   In this case our policy is to remove all optimizations for the user.
+                self.resetToAllCan();
+            } else {
+                requested_removals.processRemovals();
+                self.level++;
+            }
+
         }
     }
     class SudokuGame {
@@ -430,7 +453,7 @@
 
         handleInput(value) {
             if (value === 'h') {
-                this.cellHintsGrid.optimize1();
+                this.cellHintsGrid.gotoNextOptimizeLevel(this.currentGrid); //optimize1();
             } else {
                 let targetIndex;
                 if (value === 'u') {
@@ -455,7 +478,8 @@
                     this.currentGrid[targetIndex] = value;
                 }
                 this.checkWinCondition();
-                this.recalcHintsGrid();
+                this.cellHintsGrid.resetToAllCan();
+
             }
             this.rerenderBoard()
         }
@@ -544,7 +568,7 @@
           this.currentGrid = [...this.initialGrid];
           this.cellHintsGrid = new CellHintsGrid();
           this.renderBoard();
-          this.recalcHintsGrid(this.currentGrid)
+          this.cellHintsGrid.resetToAllCan();
           this.rerenderBoard();
         }
         renderBoard() {
@@ -589,18 +613,22 @@
               cell.innerHTML = ''
               const cellhints = this.cellHintsGrid.arr[i];
               var cantLetter = '.'
-              if (cellhints.mask===0) {
-                  cell.classList.add('error');
-                  cantLetter = 'x'
+              if (cellhints.mask===0x1ff) {
+
               } else {
-                  cell.classList.remove('error');
-              }
-              for (let j=0; j<9; j++) {
-                  const hintcell = document.createElement('div')
-                  hintcell.classList.add('hintcell');
-                  hintcell.dataset.index = j;
-                  hintcell.innerText = cellhints.canHave(j+1) ? 'o' : cantLetter;
-                  cell.appendChild(hintcell)
+                if (cellhints.mask===0) {
+                    cell.classList.add('error');
+                    cantLetter = 'x'
+                } else {
+                    cell.classList.remove('error');
+                }
+                for (let j=0; j<9; j++) {
+                    const hintcell = document.createElement('div')
+                    hintcell.classList.add('hintcell');
+                    hintcell.dataset.index = j;
+                    hintcell.innerText = cellhints.canHave(j+1) ? 'o' : cantLetter;
+                    cell.appendChild(hintcell)
+                }
               }
             }
           });
