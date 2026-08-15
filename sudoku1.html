@@ -99,11 +99,17 @@
         }
         setCannotHave(num) {
             const mm = ((1<<9)-1) - (1 << (num-1));
+            const before = this.mask;
             this.mask &= mm;
+            const changed = (this.mask!==before);
+            return changed;
         }
         setIs(num) {
             const mm = (1 << (num-1));
+            const before = this.mask
             this.mask = mm;
+            const changed = this.mask !== before;
+            return changed
         }
         canList() {
             const retval = [];
@@ -206,19 +212,20 @@
             //this.print('> ')
             const row = Math.floor(idx / 9)
             const col = idx % 9;
+            let changed = false;
             for (let idx0=0; idx0<9; idx0++) {
                 const idx1 = row*9+idx0;
-                if (idx1!==idx) this.arr[idx1].setCannotHave(num)
+                if (idx1!==idx) changed |= this.arr[idx1].setCannotHave(num)
                 const idx2 = idx0*9+col;
-                if (idx2!==idx) this.arr[idx2].setCannotHave(num)
+                if (idx2!==idx) changed |= this.arr[idx2].setCannotHave(num)
             }
             const idxOfBlock = Math.floor(row/3)*9*3 + Math.floor(col/3)*3
             for (let offset2 of [0,1,2, 9,10,11, 18,19,20]) {
                 const idx3 = idxOfBlock + offset2;
-                if (idx3!==idx) this.arr[idx3].setCannotHave(num)
+                if (idx3!==idx) changed |= this.arr[idx3].setCannotHave(num)
             }
-            this.arr[idx].setIs(num)
-            //this.print('< ')
+            changed |= this.arr[idx].setIs(num)
+            return changed;
         }
         resetToAllCan() {
             for (let i=0; i<81; i++) {
@@ -237,11 +244,14 @@
             // User should hit the 'h' key to optimize the hints further
         }
         gotoNextOptimizeLevel(currentGrid) {
+            let might_have_more_hints;
             if (this.level===0) {
                 this.recalcFromCurrentGrid(currentGrid);
+                might_have_more_hints = true;
             } else {
-                this.optimize1();
+                might_have_more_hints = this.optimize1();
             }
+            return might_have_more_hints;
         }
         // improve hints a bit based only on hints already calculated
         optimize1() {
@@ -254,6 +264,7 @@
                     this.list.push({idx,num})
                 }
                 isEmpty() {
+                    if (this.list.length>0) console.log({remlist:this.list})
                     return this.list.length===0;
                 }
                 processRemovals() {
@@ -310,46 +321,38 @@
                     }
                 }
             }
-            // improve effeciency by quickly handling the case of singletons and then removing them from consideration
-            for (let i=0; i<81; i++) {
-                const cellhints = self.arr[i];
-                const num = cellhints.singleton()
-                if (num>0) this.add(num,i);
-            }
-            // It's possible that our singleton processing above created more singletons, but the goal was just to find enough to make the following code somewhat more efficient.
-            
-            function singletons_of_list(indexes) {
-                const retval = [];
-                for (const index of indexes) if (self.arr[index].singleton()===-1) retval.push(index)
-                return retval;
-            }
             const requested_removals = new RequestedRemovals();  // We want to limit the removals per an iteration to a few that a human can calculate, so we delay the actual removing until later.  This avoid removals that are inspired by an earlier removal.
             // check columns
             for (let col=0; col<9; col++) {
+                if (!requested_removals.isEmpty()) break;
                 const idx1 = col;
                 const cells2 = [idx1+0, idx1+9, idx1+18,   idx1+27, idx1+36, idx1+45,  idx1+54, idx1+63, idx1+72]
-                optimize3(`col${col}: `, singletons_of_list(cells2), requested_removals);
+                optimize3(`col${col}: `, cells2, requested_removals);
             }
             // check rows
             for (let row=0; row<9; row++) {
+                if (!requested_removals.isEmpty()) break;
                 const idx1 = row*9;
                 const cells2 = [idx1+0, idx1+1, idx1+2,   idx1+3, idx1+4, idx1+5,  idx1+6, idx1+7, idx1+8]
-                optimize3(`row${row}: `, singletons_of_list(cells2), requested_removals);
+                optimize3(`row${row}: `, cells2, requested_removals);
             }
             // // check block
             for (let blk=0; blk<9; blk++) {
+                if (!requested_removals.isEmpty()) break;
                 const idx1 = (blk%3)*3 + Math.floor(blk/3)*27;
                 const cells2 = [idx1+0, idx1+1, idx1+2,   idx1+9, idx1+10, idx1+11,  idx1+18, idx1+19, idx1+20]
-                optimize3(`blk${blk}: `, singletons_of_list(cells2), requested_removals);
+                optimize3(`blk${blk}: `, cells2, requested_removals);
             }
+            let might_have_more_hints = true;
             if (requested_removals.isEmpty()) {
                 // our optimizer can't do any better.   In this case our policy is to remove all optimizations for the user.
-                self.resetToAllCan();
+                might_have_more_hints = false;
             } else {
                 requested_removals.processRemovals();
                 self.level++;
+                might_have_more_hints = true;
             }
-
+            return might_have_more_hints;
         }
     }
     class SudokuGame {
@@ -392,6 +395,8 @@
                     this.handleInput('u');
                 } else if (btn.dataset.val==='h') {
                     this.handleInput('h');
+                } else if (btn.dataset.val==='c') {
+                    this.handleInput('c');
                 } else {
                     if (!btn || !this.selectedCell) return;
                     this.handleInput(parseInt(btn.dataset.val));
@@ -402,6 +407,8 @@
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'h') {
                     this.handleInput('h');
+                } else if (e.key === 'c') {
+                    this.handleInput('c');
                 } else if (e.key === 'u') {
                     this.handleInput('u');
                 } else {
@@ -450,11 +457,28 @@
                 }
             });
         }
-
+        update_hints_button(might_have_more_hints) {
+            const hint_button = document.getElementById("hint_button")
+            const clearhints_button = document.getElementById("clearhints_button")
+            if (might_have_more_hints===false) {
+                hint_button.hidden = true;
+                clearhints_button.hidden = false;
+            } else if (might_have_more_hints===true) {
+                hint_button.hidden = false;
+                clearhints_button.hidden = true;
+            } else {
+                console.error('you need to pass a boolean parameter to update_hints_button')
+            }
+        }
         handleInput(value) {
             if (value === 'h') {
-                this.cellHintsGrid.gotoNextOptimizeLevel(this.currentGrid); //optimize1();
+                const might_have_more_hints = this.cellHintsGrid.gotoNextOptimizeLevel(this.currentGrid);
+                this.update_hints_button(might_have_more_hints)
+            } else if (value === 'c') {
+                this.cellHintsGrid.resetToAllCan();
+                this.update_hints_button(true)
             } else {
+                this.update_hints_button(/*might_have_more_hints:*/true)
                 let targetIndex;
                 if (value === 'u') {
                     if (this.undoSteps.length===0) {
@@ -569,6 +593,7 @@
           this.cellHintsGrid = new CellHintsGrid();
           this.renderBoard();
           this.cellHintsGrid.resetToAllCan();
+          this.update_hints_button(/*might_have_more_hints:*/true)
           this.rerenderBoard();
         }
         renderBoard() {
@@ -727,7 +752,8 @@
             <button class="num-btn" data-val="8">8</button>
             <button class="num-btn" data-val="9">9</button>
             <button class="num-btn clear-btn" data-val="0">X</button>
-            <button class="num-btn" data-val="h">(h)int</button>
+            <button class="num-btn" data-val="h" id="hint_button">(h)int</button>
+            <button class="num-btn" data-val="c" id="clearhints_button">(c)lear hints</button>
             <button class="num-btn" data-val="u">(u)ndo</button>
         </div>
     </div>
