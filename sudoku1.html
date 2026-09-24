@@ -61,7 +61,9 @@
     function stringToMask(str) {
         let retval = 0;
         for (let letter of str) {
-            retval |= 1<<(parseInt(letter)-1)
+            let intval = parseInt(letter)
+            if (intval===0) throw new Error(`not a number: ${str}`)
+            retval |= 1<<(intval-1)
         }
         return retval;
     }
@@ -264,7 +266,7 @@
                     this.list.push({idx,num})
                 }
                 isEmpty() {
-                    if (this.list.length>0) console.log({remlist:this.list})
+                    //if (this.list.length>0) console.log({remlist:this.list})
                     return this.list.length===0;
                 }
                 processRemovals() {
@@ -355,11 +357,118 @@
             return might_have_more_hints;
         }
     }
+    class BoardGrid {
+        constructor(initialGrid) {
+          this.boardGrid = Array(81);
+          if (initialGrid===undefined) {
+            throw new Error('the caller really should pass in an initial value')
+          } else if (initialGrid===0) {
+            this.boardGrid.fill(0);
+          } else if (Array.isArray(initialGrid) && initialGrid.length===81) {
+            this.boardGrid = [];
+            for (const val of initialGrid) {
+                if (![0,1,2,3,4,5,6,7,8,9].includes(val)) throw new Error(`initialGrid array has an unfamiliar value: ${val} initialGrid:${initialGrid}`)
+                this.boardGrid.push(val);
+            }
+          } else {
+            throw new Error(`unfamiliar initial value: ${initialGrid}`)
+          }
+        }
+        checkTime() {
+            //console.log({constrTime:this.constrTime,now:Date.now()}); throw 'debug'
+            //console.log({now:Date.now()})
+            //this.constrTime = Date.now();
+            //if (Date.now()>(this.constrTime+20)) throw Error('too much time')
+        }
+        logPrefix() {
+            let stackstr = ''
+            try {throw new Error()} catch (ex) { stackstr = ex.stack}
+            let len = stackstr.length;
+            len = Math.floor(len/20);
+            return ' '.repeat(len)
+        }
+        isValidMove(val, index) {
+            //console.log(this.logPrefix()+`> isValidMove ${val} @ ${index}`)
+            const row = Math.floor(index / 9);
+            const col = index % 9; // Check Row & Column duplicates
+            const boxRow = Math.floor(row / 3) * 3;
+            const boxCol = Math.floor(col / 3) * 3;
+            let rowIdx = row*9; // left of row
+            let colIdx = col;  // top of row
+            let boxIdx = boxRow*9+boxCol;
+            const boxDeltaIdx = [1,1,7,1,1,7,1,1,7]
+            for (let i = 0; i < 9; i++) {
+                //console.log(this.logPrefix()+JSON.stringify({rowIdx,colIdx,boxIdx, rv: this.boardGrid[rowIdx], cv: this.boardGrid[colIdx], bv: this.boardGrid[boxIdx] }))
+                if (rowIdx !== index && this.boardGrid[rowIdx] === val) return false;
+                if (colIdx !== index && this.boardGrid[colIdx] === val) return false;
+                if (boxIdx !== index && this.boardGrid[boxIdx] === val) return false;
+                rowIdx += 1;
+                colIdx += 9;
+                boxIdx += boxDeltaIdx[i]
+            }
+            return true;
+        }
+        hasSeveralSolutions() {
+            //console.log(this.logPrefix()+'>hasSeveralSolutions')
+            let solutionCount = 0;
+            for (let i=0; i<81; i++) {
+                this.checkTime();
+                if (this.boardGrid[i]===0) {
+                    //console.log(this.logPrefix()+JSON.stringify({i}))
+                    // let's try some values
+                    for (let cval=1; cval<=9; cval++) {
+                        //console.log(this.logPrefix()+`${cval,i}`)
+                        if (this.isValidMove(cval,i)) {
+                            //console.log(this.logPrefix()+'is valid move')
+                            this.boardGrid[i] = cval;
+                            //console.log(this.logPrefix()+`> hasSeveralSolutions ${cval} @ ${i}`)
+                            const sval = this.hasSeveralSolutions();
+                            solutionCount += sval;
+                            //console.log(this.logPrefix()+`< hasSeveralSolutions ${cval} @ ${i}  returns ${sval}`)
+                            this.boardGrid[i] = 0;
+                        } 
+                        if (solutionCount>1) { 
+                            //console.log(this.logPrefix()+`< hasSeveralSolutions ${solutionCount}`)
+                            return solutionCount;
+                        }
+                    }
+                    //console.log(this.logPrefix()+`< hasSeveralSolutions ${solutionCount}`) 
+                    return solutionCount;
+                    // we return because by exploring all possibilities of this cell and recursively the other blank ones, we've explored all possibilities
+                }
+            }
+            // there were no blanks
+            solutionCount = 1
+            //console.log(this.logPrefix()+`< hasSeveralSolutions ${solutionCount} ln420`)
+            return solutionCount;  // there were no blanks. It's apparently already solved.
+        }
+        removeMore(moreToRemove) {
+            if (moreToRemove===0) return;
+            const solCount = this.hasSeveralSolutions()
+            if (solCount<=0) throw new Error('it already is unsolvable')  // the caller made a mistake
+            if (solCount>1) return;  // too many solutions and removing more can not make it better.
+            let candidateIndices = createScrambled0BasedNumberArray(81)
+            const startTime = Date.now();
+
+            for (const idxRemove of candidateIndices) {
+                const oldValue = this.boardGrid[idxRemove]
+                this.boardGrid[idxRemove] = 0;
+                if (this.hasSeveralSolutions()!==1) {
+                    // assert: too many solutions
+                    this.boardGrid[idxRemove] = oldValue;
+                } else {
+                    moreToRemove--;
+                    if (moreToRemove===0) return;
+                }
+                if (Date.now()>(startTime+2000)) break; //throw Error('too much time')
+            }
+        }
+    }
     class SudokuGame {
         constructor() {
             this.boardContainer = document.getElementById('sudoku-board');
             this.selectedCell = null;
-            this.initialGrid = Array(81).fill(0); // Puzzles states
+            this.initialGrid = new BoardGrid(0); //Array(81).fill(0); // Puzzles states
             this.currentGrid = Array(81).fill(0); 
             this.solutionGrid = Array(81).fill(0);
             //this.cellHintsGrid = new CellHintsGrid();
@@ -537,7 +646,7 @@
           this.undoSteps = [];
           const difficulty = document.getElementById('difficulty').value;
           if (difficulty==='game1') {
-            this.initialGrid = [
+            this.initialGrid = new BoardGrid([
                 2, 5, 9,  0, 4, 6,  0, 0, 0,
                 0, 0, 0,  5, 8, 7,  1, 9, 0,
                 0, 1, 0,  3, 9, 2,  0, 0, 6,
@@ -549,9 +658,9 @@
                 0, 6, 0,  0, 0, 0,  0, 1, 8,
                 9, 0, 0,  7, 0, 0,  0, 2, 0, 
                 5, 2, 0,  0, 1, 0,  0, 0, 0
-            ]
+            ])
           } else if (difficulty==='game1.1') {
-            this.initialGrid = [
+            this.initialGrid = new BoardGrid([
                 2, 5, 9,  1, 4, 6,  8, 0, 0,
                 0, 4, 0,  5, 8, 7,  1, 9, 0,
                 0, 1, 0,  3, 9, 2,  0, 0, 6,
@@ -563,9 +672,9 @@
                 0, 6, 0,  0, 0, 0,  0, 1, 8,
                 9, 0, 0,  7, 0, 0,  0, 2, 0, 
                 5, 2, 0,  0, 1, 0,  0, 0, 0
-            ]
+            ])
           } else if (difficulty==='game1.1.1') {
-            this.initialGrid = [
+            this.initialGrid = new BoardGrid([
                 2, 5, 9,  1, 4, 6,  8, 0, 0,  // only good is 3, 7,  not 7, 3.  But can you quickly spot why?
                 3, 4, 6,  5, 8, 7,  1, 9, 2,
                 0, 1, 0,  3, 9, 2,  0, 0, 6,  // only good move is 4,5,  not 5,4, but can you quickly spot why?
@@ -577,19 +686,22 @@
                 0, 6, 0,  2, 0, 0,  0, 1, 8,
                 9, 8, 1,  7, 0, 0,  0, 2, 0, 
                 5, 2, 0,  0, 1, 0,  0, 0, 0
-            ]
+            ])
           } else {
-            let cellsToRemove = 40; 
+            let cellsToRemove = 40; // medium
             // Medium default
             if (difficulty === 'easy') cellsToRemove = 30;
             if (difficulty === 'hard') cellsToRemove = 52;
+            if (difficulty === 'harder') cellsToRemove = 60;
             // Mirror solution grid
-            this.initialGrid = [...this.solutionGrid];
+            console.log({solGrid:this.solutionGrid})
+            this.initialGrid = new BoardGrid([...this.solutionGrid]);
+            console.log({initialGrid:this.initialGrid})
             // Pluck values to match target difficulties
             let indices = createScrambled0BasedNumberArray(81)
-            for (let i = 0; i < cellsToRemove; i++) {this.initialGrid[indices[i]] = 0;}
+            this.initialGrid.removeMore(cellsToRemove)
           }
-          this.currentGrid = [...this.initialGrid];
+          this.currentGrid = [...this.initialGrid.boardGrid];
           this.cellHintsGrid = new CellHintsGrid();
           this.renderBoard();
           this.cellHintsGrid.resetToAllCan();
@@ -607,7 +719,7 @@
             if (val !== 0) {
               cell.innerHTML = ''
               cell.textContent = val;
-              if (this.initialGrid[i] !== 0) {
+              if (this.initialGrid.boardGrid[i] !== 0) {
                 cell.classList.add('fixed');
               }
             } else {
@@ -629,7 +741,7 @@
               cell.classList.add('non-empty-cell')
               cell.innerHTML = ''
               cell.textContent = val;
-              if (this.initialGrid[i] !== 0) {
+              if (this.initialGrid.boardGrid[i] !== 0) {
                 cell.classList.add('fixed');
               }
             } else {
@@ -728,6 +840,7 @@
                 <option value="easy">Easy</option>
                 <option value="medium" selected>Medium</option>
                 <option value="hard">Hard</option>
+                <option value="harder">Harder</option>
                 <option value="game1">Game 1</option>
                 <option value="game1.1">Game 1.1</option>
                 <option value="game1.1.1">Game 1.1.1</option>
